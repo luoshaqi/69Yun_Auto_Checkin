@@ -6,12 +6,24 @@ import re
 from bs4 import BeautifulSoup
 from datetime import datetime, timedelta
 
-# 生成超链接
-def format_link(text, url):
-    return f'<a href="{url}">{text}</a>'
+# 解析 Emby 服务器信息
+def fetch_emby_servers(soup):
+    emby_links = []
+    for script in soup.find_all('script'):
+        if script.string and 'emby' in script.string.lower():
+            matches = re.findall(r'(https?://[\w\.-]+:\d+|https?://[\w\.-]+)', script.string)
+            for match in matches:
+                if "emby" in match:
+                    emby_links.append(match)
 
-# 获取用户信息并提取订阅链接
-def fetch_user_info(domain, headers):
+    if not emby_links:
+        return ""
+
+    links_formatted = "\n".join([f"🔗 <a href=\"{link}\">{link}</a>" for link in emby_links])
+    return f"\n🌍 Emby 硬盘服:\n{links_formatted}\n"
+
+# 解析用户信息
+def fetch_and_extract_info(domain, headers):
     url = f"{domain}/user"
     response = requests.get(url, headers=headers)
 
@@ -19,9 +31,11 @@ def fetch_user_info(domain, headers):
         return "❌ 用户信息获取失败\n"
 
     soup = BeautifulSoup(response.text, 'html.parser')
-    script_tags = soup.find_all('script')
 
+    # 解析用户信息
+    script_tags = soup.find_all('script')
     chatra_script = next((script.string for script in script_tags if script.string and 'window.ChatraIntegration' in script.string), None)
+    
     if not chatra_script:
         return "⚠️ 未识别到用户信息\n"
 
@@ -33,33 +47,26 @@ def fetch_user_info(domain, headers):
     for key in user_info:
         user_info[key] = user_info[key].group(1) if user_info[key] else "未知"
 
-    # 提取 Clash 和 V2ray 订阅链接
-    sub_links = ""
+    # 解析 Clash 和 v2ray 订阅链接
     link_match = next((re.search(r"'https://checkhere.top/link/(.*?)\?sub=1'", str(script)) for script in script_tags if 'index.oneclickImport' in str(script) and 'clash' in str(script)), None)
+    
+    sub_links = ""
     if link_match:
         clash_link = f"https://checkhere.top/link/{link_match.group(1)}?clash=1"
         v2ray_link = f"https://checkhere.top/link/{link_match.group(1)}?sub=3"
-        sub_links = f"\n🔗 {format_link('Clash 订阅', clash_link)}\n🔗 {format_link('V2ray 订阅', v2ray_link)}\n"
+        sub_links = f"\n🔗 <a href=\"{clash_link}\">Clash 订阅</a>\n🔗 <a href=\"{v2ray_link}\">V2ray 订阅</a>\n"
 
-    return f"📅 到期时间: {user_info['到期时间']}\n📊 剩余流量: {user_info['剩余流量']}{sub_links}\n"
+    # 提取 Emby 服务器信息
+    emby_info = fetch_emby_servers(soup)
 
-# Emby 服务器信息
-def get_emby_info():
-    emby_servers = [
-        ("DPX服", "http://emby.69yun69.com:18690"),
-        ("教学服", "https://emby2.69yun69.com:443"),
-        ("50万+资源服", "https://emby3.69yun69.com:443"),
-    ]
-    emby_info = "\n🌍 Emby 硬盘服:\n" + "\n".join([f"🔗 {format_link(name, url)}" for name, url in emby_servers]) + "\n"
-    emby_account = "📚 账号信息:\n👤 Emby 账号: 您注册69云机场的邮箱\n🔑 密码: 空\n"
-    return emby_info + emby_account
+    return f"📅 到期时间: {user_info['到期时间']}\n📊 剩余流量: {user_info['剩余流量']}{sub_links}{emby_info}\n"
 
-# 读取环境变量
+# 读取环境变量并生成配置
 def generate_config():
     domain = os.getenv('DOMAIN', 'https://69yun69.com')
     bot_token = os.getenv('BOT_TOKEN', '')
     chat_id = os.getenv('CHAT_ID', '')
-
+    
     accounts = []
     index = 1
     while True:
@@ -77,7 +84,8 @@ def send_message(msg, bot_token, chat_id):
     payload = {
         "chat_id": chat_id,
         "text": f"⏰ 执行时间: {now.strftime('%Y-%m-%d %H:%M:%S')}\n\n{msg}",
-        "parse_mode": "HTML"
+        "parse_mode": "HTML",
+        "disable_web_page_preview": True  # 防止 Telegram 预览链接
     }
     try:
         requests.post(f"https://api.telegram.org/bot{bot_token}/sendMessage", data=payload)
@@ -87,7 +95,7 @@ def send_message(msg, bot_token, chat_id):
 # 登录并签到
 def checkin(account, domain, bot_token, chat_id):
     user, password = account['user'], account['pass']
-    account_info = f"🔹 地址: {domain}\n👤 账号: {user}\n🔑 密码: {password}\n"
+    account_info = f"🔹 地址: <a href=\"{domain}\">{domain}</a>\n👤 账号: {user}\n🔑 密码: {password}\n"
 
     # 登录
     login_response = requests.post(
@@ -126,8 +134,8 @@ def checkin(account, domain, bot_token, chat_id):
     result_msg = checkin_result.get('msg', '签到结果未知')
     result_emoji = "✅" if checkin_result.get('ret') == 1 else "⚠️"
 
-    user_info = fetch_user_info(domain, {'Cookie': '; '.join([f"{key}={value}" for key, value in cookies.items()])})
-    final_msg = f"{account_info}{user_info}🎉 签到结果: {result_emoji} {result_msg}\n{get_emby_info()}"
+    user_info = fetch_and_extract_info(domain, {'Cookie': '; '.join([f"{key}={value}" for key, value in cookies.items()])})
+    final_msg = f"{account_info}{user_info}🎉 签到结果: {result_emoji} {result_msg}\n"
 
     send_message(final_msg, bot_token, chat_id)
     return final_msg
