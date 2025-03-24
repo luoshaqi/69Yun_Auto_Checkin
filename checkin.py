@@ -6,37 +6,21 @@ import re
 from bs4 import BeautifulSoup
 from datetime import datetime, timedelta
 
-# 解析 Emby 服务器信息
-def fetch_emby_servers(soup):
-    emby_links = []
-    for script in soup.find_all('script'):
-        if script.string and 'emby' in script.string.lower():
-            matches = re.findall(r'(https?://[\w\.-]+:\d+|https?://[\w\.-]+)', script.string)
-            for match in matches:
-                if "emby" in match:
-                    emby_links.append(match)
-
-    if not emby_links:
-        return ""
-
-    links_formatted = "\n".join([f"🔗 <a href=\"{link}\">{link}</a>" for link in emby_links])
-    return f"\n🌍 Emby 硬盘服:\n{links_formatted}\n"
-
 # 解析用户信息
 def fetch_and_extract_info(domain, headers):
     url = f"{domain}/user"
     response = requests.get(url, headers=headers)
 
     if response.status_code != 200:
+        print("❌ 用户信息获取失败")
         return "❌ 用户信息获取失败\n"
 
     soup = BeautifulSoup(response.text, 'html.parser')
-
-    # 解析用户信息
     script_tags = soup.find_all('script')
+
     chatra_script = next((script.string for script in script_tags if script.string and 'window.ChatraIntegration' in script.string), None)
-    
     if not chatra_script:
+        print("⚠️ 未识别到用户信息")
         return "⚠️ 未识别到用户信息\n"
 
     user_info = {
@@ -47,7 +31,7 @@ def fetch_and_extract_info(domain, headers):
     for key in user_info:
         user_info[key] = user_info[key].group(1) if user_info[key] else "未知"
 
-    # 解析 Clash 和 v2ray 订阅链接
+    # 提取 Clash 和 v2ray 订阅链接
     link_match = next((re.search(r"'https://checkhere.top/link/(.*?)\?sub=1'", str(script)) for script in script_tags if 'index.oneclickImport' in str(script) and 'clash' in str(script)), None)
     
     sub_links = ""
@@ -56,10 +40,17 @@ def fetch_and_extract_info(domain, headers):
         v2ray_link = f"https://checkhere.top/link/{link_match.group(1)}?sub=3"
         sub_links = f"\n🔗 <a href=\"{clash_link}\">Clash 订阅</a>\n🔗 <a href=\"{v2ray_link}\">V2ray 订阅</a>\n"
 
-    # 提取 Emby 服务器信息
-    emby_info = fetch_emby_servers(soup)
+    # Emby 服务器信息
+    emby_servers = {
+        "DPX服": "http://emby.69yun69.com:18690",
+        "教学服": "https://emby2.69yun69.com:443",
+        "50万+资源服": "https://emby3.69yun69.com:443"
+    }
 
-    return f"📅 到期时间: {user_info['到期时间']}\n📊 剩余流量: {user_info['剩余流量']}{sub_links}{emby_info}\n"
+    # 生成 Emby 服务器超链接
+    emby_links = "\n".join([f'🔗 <a href="{url}">{name}</a>' for name, url in emby_servers.items()])
+
+    return f"📅 到期时间: {user_info['到期时间']}\n📊 剩余流量: {user_info['剩余流量']}{sub_links}\n\n🌍 Emby 硬盘服:\n{emby_links}\n"
 
 # 读取环境变量并生成配置
 def generate_config():
