@@ -6,7 +6,11 @@ import re
 from bs4 import BeautifulSoup
 from datetime import datetime, timedelta
 
-# 解析用户信息
+# 格式化超链接
+def format_link(text, url):
+    return f'<a href="{url}">{text}</a>'
+
+# 获取用户信息
 def fetch_and_extract_info(domain, headers):
     url = f"{domain}/user"
     response = requests.get(url, headers=headers)
@@ -31,18 +35,30 @@ def fetch_and_extract_info(domain, headers):
     for key in user_info:
         user_info[key] = user_info[key].group(1) if user_info[key] else "未知"
 
-    # 提取 Clash 和 v2ray 订阅链接
+    # 提取 Clash 和 V2ray 订阅链接
     link_match = next((re.search(r"'https://checkhere.top/link/(.*?)\?sub=1'", str(script)) for script in script_tags if 'index.oneclickImport' in str(script) and 'clash' in str(script)), None)
-    sub_links = f"\nClash 订阅: https://checkhere.top/link/{link_match.group(1)}?clash=1\nV2ray 订阅: https://checkhere.top/link/{link_match.group(1)}?sub=3\n" if link_match else ""
+    sub_links = ""
+    if link_match:
+        clash_link = f"https://checkhere.top/link/{link_match.group(1)}?clash=1"
+        v2ray_link = f"https://checkhere.top/link/{link_match.group(1)}?sub=3"
+        sub_links = f"\n🔗 {format_link('Clash 订阅', clash_link)}\n🔗 {format_link('V2ray 订阅', v2ray_link)}\n"
 
-    return f"📅 到期时间: {user_info['到期时间']}\n📊 剩余流量: {user_info['剩余流量']}{sub_links}\n"
+    # Emby 服务器信息
+    emby_servers = [
+        ("DPX服", "http://emby.69yun69.com:18690"),
+        ("教学服", "https://emby2.69yun69.com:443"),
+        ("50万+资源服", "https://emby3.69yun69.com:443"),
+    ]
+    emby_info = "\n🌍 Emby 硬盘服:\n" + "\n".join([f"🔗 {format_link(name, url)}" for name, url in emby_servers]) + "\n"
 
-# 读取环境变量并生成配置
+    return f"📅 到期时间: {user_info['到期时间']}\n📊 剩余流量: {user_info['剩余流量']}{sub_links}{emby_info}\n"
+
+# 读取环境变量
 def generate_config():
     domain = os.getenv('DOMAIN', 'https://69yun69.com')
     bot_token = os.getenv('BOT_TOKEN', '')
     chat_id = os.getenv('CHAT_ID', '')
-    
+
     accounts = []
     index = 1
     while True:
@@ -70,7 +86,7 @@ def send_message(msg, bot_token, chat_id):
 # 登录并签到
 def checkin(account, domain, bot_token, chat_id):
     user, password = account['user'], account['pass']
-    account_info = f"🔹 地址: {domain}\n🔑 账号: {user}\n🔒 密码: {password}\n"
+    account_info = f"🔹 地址: {domain}\n👤 账号: {user}\n🔑 密码: {password}\n"
 
     # 登录
     login_response = requests.post(
