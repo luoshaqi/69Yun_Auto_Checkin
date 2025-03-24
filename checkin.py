@@ -6,17 +6,16 @@ import re
 from bs4 import BeautifulSoup
 from datetime import datetime, timedelta
 
-# 格式化超链接
+# 生成超链接
 def format_link(text, url):
     return f'<a href="{url}">{text}</a>'
 
-# 获取用户信息
-def fetch_and_extract_info(domain, headers):
+# 获取用户信息并提取订阅链接
+def fetch_user_info(domain, headers):
     url = f"{domain}/user"
     response = requests.get(url, headers=headers)
 
     if response.status_code != 200:
-        print("❌ 用户信息获取失败")
         return "❌ 用户信息获取失败\n"
 
     soup = BeautifulSoup(response.text, 'html.parser')
@@ -24,7 +23,6 @@ def fetch_and_extract_info(domain, headers):
 
     chatra_script = next((script.string for script in script_tags if script.string and 'window.ChatraIntegration' in script.string), None)
     if not chatra_script:
-        print("⚠️ 未识别到用户信息")
         return "⚠️ 未识别到用户信息\n"
 
     user_info = {
@@ -36,22 +34,25 @@ def fetch_and_extract_info(domain, headers):
         user_info[key] = user_info[key].group(1) if user_info[key] else "未知"
 
     # 提取 Clash 和 V2ray 订阅链接
-    link_match = next((re.search(r"'https://checkhere.top/link/(.*?)\?sub=1'", str(script)) for script in script_tags if 'index.oneclickImport' in str(script) and 'clash' in str(script)), None)
     sub_links = ""
+    link_match = next((re.search(r"'https://checkhere.top/link/(.*?)\?sub=1'", str(script)) for script in script_tags if 'index.oneclickImport' in str(script) and 'clash' in str(script)), None)
     if link_match:
         clash_link = f"https://checkhere.top/link/{link_match.group(1)}?clash=1"
         v2ray_link = f"https://checkhere.top/link/{link_match.group(1)}?sub=3"
         sub_links = f"\n🔗 {format_link('Clash 订阅', clash_link)}\n🔗 {format_link('V2ray 订阅', v2ray_link)}\n"
 
-    # Emby 服务器信息
+    return f"📅 到期时间: {user_info['到期时间']}\n📊 剩余流量: {user_info['剩余流量']}{sub_links}\n"
+
+# Emby 服务器信息
+def get_emby_info():
     emby_servers = [
         ("DPX服", "http://emby.69yun69.com:18690"),
         ("教学服", "https://emby2.69yun69.com:443"),
         ("50万+资源服", "https://emby3.69yun69.com:443"),
     ]
     emby_info = "\n🌍 Emby 硬盘服:\n" + "\n".join([f"🔗 {format_link(name, url)}" for name, url in emby_servers]) + "\n"
-
-    return f"📅 到期时间: {user_info['到期时间']}\n📊 剩余流量: {user_info['剩余流量']}{sub_links}{emby_info}\n"
+    emby_account = "📚 账号信息:\n👤 Emby 账号: 您注册69云机场的邮箱\n🔑 密码: 空\n"
+    return emby_info + emby_account
 
 # 读取环境变量
 def generate_config():
@@ -125,8 +126,8 @@ def checkin(account, domain, bot_token, chat_id):
     result_msg = checkin_result.get('msg', '签到结果未知')
     result_emoji = "✅" if checkin_result.get('ret') == 1 else "⚠️"
 
-    user_info = fetch_and_extract_info(domain, {'Cookie': '; '.join([f"{key}={value}" for key, value in cookies.items()])})
-    final_msg = f"{account_info}{user_info}🎉 签到结果: {result_emoji} {result_msg}\n"
+    user_info = fetch_user_info(domain, {'Cookie': '; '.join([f"{key}={value}" for key, value in cookies.items()])})
+    final_msg = f"{account_info}{user_info}🎉 签到结果: {result_emoji} {result_msg}\n{get_emby_info()}"
 
     send_message(final_msg, bot_token, chat_id)
     return final_msg
