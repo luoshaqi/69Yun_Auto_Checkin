@@ -102,21 +102,10 @@ def checkin(account, domain, bot_token, chat_id):
 
     user_info = fetch_and_extract_info(domain, {'Cookie': '; '.join([f"{key}={value}" for key, value in cookies.items()])})
     
-    emby_info = """
-🌍 Emby 硬盘服:
-🔗 DPX服：http://emby.69yun69.com:18690
-🔗 教学服：https://emby2.69yun69.com:443
-🔗 50万+资源服：https://emby3.69yun69.com:443
-
-📚 账号信息:
-👤 Emby 账号: 您注册69云机场的邮箱
-🔑 密码: 空
-    """
-    
-    final_msg = f"{plain_info}{user_info}🎉 签到结果: {result_emoji} {result_msg}\n{emby_info}"
+    final_msg = f"{plain_info}{user_info}🎉 签到结果: {result_emoji} {result_msg}"
     send_message(final_msg, bot_token, chat_id)
 
 if __name__ == "__main__":
     config = generate_config()
     for account in config.get("accounts", []):
-        checkin(account, config['domain'], config['BotToken'], config['ChatID'])
+        checkin(account, config['domain'], config['BotToken'], config['Chat_ID'])
