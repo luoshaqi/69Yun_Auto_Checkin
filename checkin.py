@@ -57,7 +57,7 @@ def generate_config():
         accounts.append({'user': user, 'pass': password})
         index += 1
 
-    return {'domain': domain, 'BotToken': bot_token, 'ChatID': chat_id, 'accounts': accounts}
+    return {'domain': domain, 'BotToken': bot_token, 'CHATID': chat_id, 'accounts': accounts}
 
 # 发送 Telegram 消息（HTML 格式）
 def send_message(msg, bot_token, chat_id):
@@ -68,9 +68,10 @@ def send_message(msg, bot_token, chat_id):
         "parse_mode": "HTML"
     }
     try:
-        requests.post(f"https://api.telegram.org/bot{bot_token}/sendMessage", data=payload)
+        # 使用 json=payload 而不是 data=payload
+        requests.post(f"https://api.telegram.org/bot{bot_token}/sendMessage", json=payload)
     except Exception as e:
-        print("❌ 发送 Telegram 消息失败。")
+        print("❌ 发送 Telegram 消息失败：", e)
 
 # 登录并签到
 def checkin(account, domain, bot_token, chat_id):
@@ -142,4 +143,4 @@ if __name__ == "__main__":
     config = generate_config()
     for account in config.get("accounts", []):
         print("📌 正在执行签到任务...")
-        checkin(account, config['domain'], config['BotToken'], config['ChatID'])
+        checkin(account, config['domain'], config['BotToken'], config['CHATID'])
