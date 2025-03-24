@@ -6,11 +6,13 @@ import re
 from bs4 import BeautifulSoup
 from datetime import datetime, timedelta
 
+# 解析用户信息
 def fetch_and_extract_info(domain, headers):
     url = f"{domain}/user"
     response = requests.get(url, headers=headers)
 
     if response.status_code != 200:
+        print("❌ 用户信息获取失败")
         return "❌ 用户信息获取失败\n"
 
     soup = BeautifulSoup(response.text, 'html.parser')
@@ -18,6 +20,7 @@ def fetch_and_extract_info(domain, headers):
 
     chatra_script = next((script.string for script in script_tags if script.string and 'window.ChatraIntegration' in script.string), None)
     if not chatra_script:
+        print("⚠️ 未识别到用户信息")
         return "⚠️ 未识别到用户信息\n"
 
     user_info = {
@@ -28,11 +31,13 @@ def fetch_and_extract_info(domain, headers):
     for key in user_info:
         user_info[key] = user_info[key].group(1) if user_info[key] else "未知"
 
+    # 提取 Clash 和 v2ray 订阅链接
     link_match = next((re.search(r"'https://checkhere.top/link/(.*?)\?sub=1'", str(script)) for script in script_tags if 'index.oneclickImport' in str(script) and 'clash' in str(script)), None)
     sub_links = f"\nClash 订阅: https://checkhere.top/link/{link_match.group(1)}?clash=1\nV2ray 订阅: https://checkhere.top/link/{link_match.group(1)}?sub=3\n" if link_match else ""
 
     return f"📅 到期时间: {user_info['到期时间']}\n📊 剩余流量: {user_info['剩余流量']}{sub_links}\n"
 
+# 读取环境变量并生成配置
 def generate_config():
     domain = os.getenv('DOMAIN', 'https://69yun69.com')
     bot_token = os.getenv('BOT_TOKEN', '')
@@ -49,8 +54,9 @@ def generate_config():
 
     return {'domain': domain, 'BotToken': bot_token, 'ChatID': chat_id, 'accounts': accounts}
 
+# 发送 Telegram 消息
 def send_message(msg, bot_token, chat_id):
-    now = datetime.utcnow() + timedelta(hours=8)
+    now = datetime.utcnow() + timedelta(hours=8)  # 转换为北京时间
     payload = {
         "chat_id": chat_id,
         "text": f"⏰ 执行时间: {now.strftime('%Y-%m-%d %H:%M:%S')}\n\n{msg}",
@@ -59,12 +65,14 @@ def send_message(msg, bot_token, chat_id):
     try:
         requests.post(f"https://api.telegram.org/bot{bot_token}/sendMessage", data=payload)
     except Exception as e:
-        pass
+        print(f"❌ 发送 Telegram 消息失败: {e}")
 
+# 登录并签到
 def checkin(account, domain, bot_token, chat_id):
     user, password = account['user'], account['pass']
-    plain_info = f"🔹 地址: {domain}\n🔑 账号: {user}\n🔒 密码: {password}\n"
+    account_info = f"🔹 地址: {domain}\n🔑 账号: {user}\n🔒 密码: {password}\n"
 
+    # 登录
     login_response = requests.post(
         f"{domain}/auth/login",
         json={'email': user, 'passwd': password, 'remember_me': 'on', 'code': ""},
@@ -79,12 +87,13 @@ def checkin(account, domain, bot_token, chat_id):
 
     if login_response.status_code != 200 or login_response.json().get("ret") != 1:
         err_msg = f"❌ 登录失败: {login_response.json().get('msg', '未知错误')}"
-        send_message(plain_info + err_msg, bot_token, chat_id)
-        return
+        send_message(account_info + err_msg, bot_token, chat_id)
+        return err_msg
 
     cookies = login_response.cookies
     time.sleep(1)
 
+    # 签到
     checkin_response = requests.post(
         f"{domain}/user/checkin",
         headers={
@@ -101,11 +110,14 @@ def checkin(account, domain, bot_token, chat_id):
     result_emoji = "✅" if checkin_result.get('ret') == 1 else "⚠️"
 
     user_info = fetch_and_extract_info(domain, {'Cookie': '; '.join([f"{key}={value}" for key, value in cookies.items()])})
-    
-    final_msg = f"{plain_info}{user_info}🎉 签到结果: {result_emoji} {result_msg}"
-    send_message(final_msg, bot_token, chat_id)
+    final_msg = f"{account_info}{user_info}🎉 签到结果: {result_emoji} {result_msg}\n"
 
+    send_message(final_msg, bot_token, chat_id)
+    return final_msg
+
+# 主函数
 if __name__ == "__main__":
     config = generate_config()
     for account in config.get("accounts", []):
-        checkin(account, config['domain'], config['BotToken'], config['Chat_ID'])
+        print("📌 正在签到...")
+        print(checkin(account, config['domain'], config['BotToken'], config['ChatID']))
