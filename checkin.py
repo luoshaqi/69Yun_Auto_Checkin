@@ -40,17 +40,7 @@ def fetch_and_extract_info(domain, headers):
         v2ray_link = f"https://checkhere.top/link/{link_match.group(1)}?sub=3"
         sub_links = f"\n🔗 <a href=\"{clash_link}\">Clash 订阅</a>\n🔗 <a href=\"{v2ray_link}\">V2ray 订阅</a>\n"
 
-    # Emby 服务器信息
-    emby_servers = {
-        "DPX服": "http://emby.69yun69.com:18690",
-        "教学服": "https://emby2.69yun69.com:443",
-        "50万+资源服": "https://emby3.69yun69.com:443"
-    }
-
-    # 生成 Emby 服务器超链接
-    emby_links = "\n".join([f'🔗 <a href="{url}">{name}</a>' for name, url in emby_servers.items()])
-
-    return f"📅 到期时间: {user_info['到期时间']}\n📊 剩余流量: {user_info['剩余流量']}{sub_links}\n\n🌍 Emby 硬盘服:\n{emby_links}\n"
+    return f"📅 到期时间: {user_info['到期时间']}\n📊 剩余流量: {user_info['剩余流量']}{sub_links}\n"
 
 # 读取环境变量并生成配置
 def generate_config():
@@ -86,7 +76,7 @@ def send_message(msg, bot_token, chat_id):
 # 登录并签到
 def checkin(account, domain, bot_token, chat_id):
     user, password = account['user'], account['pass']
-    account_info = f"🔹 地址: <a href=\"{domain}\">{domain}</a>\n👤 账号: {user}\n🔑 密码: {password}\n"
+    account_info = f"🔹 地址: {domain}\n🔑 账号: {user}\n🔒 密码: {password}\n"
 
     # 登录
     login_response = requests.post(
