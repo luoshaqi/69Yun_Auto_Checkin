@@ -2,9 +2,9 @@
 
 ---
 
-## **🔥 自动签到 Bot（GitHub Actions）**
+## **🔥 69云自动签到（GitHub Actions）**
 
-🚀 这是一个基于 GitHub Actions 的 **自动签到脚本**，支持 **每日签到**，并将签到结果推送到 **Telegram**。
+🚀 这是一个基于 GitHub Actions 的 **69云的自动签到脚本**，支持 **每日签到**，并将签到结果推送到 **Telegram**。
 
 ---
 
