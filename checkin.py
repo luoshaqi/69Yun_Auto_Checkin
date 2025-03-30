@@ -44,7 +44,7 @@ def fetch_and_extract_info(domain, headers):
 
 # 读取环境变量并生成配置
 def generate_config():
-    domain = os.getenv('DOMAIN', 'https://69yun69.com')
+    domain = "https://69yun69.com"
     bot_token = os.getenv('BOT_TOKEN', '')
     chat_id = os.getenv('CHAT_ID', '')
     
