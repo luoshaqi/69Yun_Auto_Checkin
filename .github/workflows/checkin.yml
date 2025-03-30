@@ -24,7 +24,6 @@ jobs:
 
       - name: ✅ 运行签到脚本
         env:
-          DOMAIN: ${{ secrets.DOMAIN }}
           BOT_TOKEN: ${{ secrets.BOT_TOKEN }}
           CHAT_ID: ${{ secrets.CHAT_ID }}
           USER1: ${{ secrets.USER1 }}
