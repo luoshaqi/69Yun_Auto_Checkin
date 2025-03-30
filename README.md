@@ -4,7 +4,7 @@
 
 ## **🔥 69云自动签到（GitHub Actions）**
 
-🚀 这是一个基于 GitHub Actions 的 **69云的自动签到脚本**，支持 **每日签到**，并将签到结果推送到 **Telegram**。
+🚀 这是一个基于 **GitHub Actions** 的 **69云的自动签到脚本**，支持 **每日签到**，并将签到结果推送到 **Telegram**。
 
 ---
 
@@ -29,7 +29,6 @@
 
 | Secret 名称   | 说明 |
 |--------------|---------------------------------|
-| `DOMAIN`     | 你的签到网站（如 `https://69yun69.com`） |
 | `BOT_TOKEN`  | 你的 Telegram Bot API 令牌 |
 | `CHAT_ID`    | 你的 Telegram 用户 ID |
 | `USER1`      | 第一个账号的邮箱 |
