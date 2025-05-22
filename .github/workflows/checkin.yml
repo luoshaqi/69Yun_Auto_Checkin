@@ -32,3 +32,12 @@ jobs:
 
       - name: 📌 执行完成
         run: echo "签到任务已完成 ✅"
+        
+  keepalive-workflow:
+    name: Keepalive Workflow
+    if: ${{ always() }}
+    runs-on: ubuntu-latest
+    permissions:
+      actions: write
+    steps:
+      - uses: liskin/gh-workflow-keepalive@v1
