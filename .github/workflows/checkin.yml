@@ -26,8 +26,8 @@ jobs:
         env:
           # BOT_TOKEN: ${{ secrets.BOT_TOKEN }}
           # CHAT_ID: ${{ secrets.CHAT_ID }}
-          USER1: ${{ secrets.USER1 }}
-          PASS1: ${{ secrets.PASS1 }}
+          USER1: ${{ secrets.USER2 }}
+          PASS1: ${{ secrets.PASS2 }}
         run: python checkin.py
 
       - name: 📌 执行完成
